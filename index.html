@@ -1,453 +1,848 @@
 
-// ==================== CINEBOOK - APLIKASI PEMESANAN TIKET BIOSKOP ====================
-// Jalankan dengan: dart cinebook.dart
-// ====================================================================================
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>CineBook - Booking Tiket Bioskop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-import 'dart:io';
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-// ==================== DATA GLOBAL ====================
-class AppData {
-  static String currentUser = "";
-  static List<Map<String, dynamic>> allBookings = [];
-  
-  static List<Map<String, dynamic>> films = [
-    {'id': 1, 'name': 'Avengers: Endgame', 'rating': 4.8, 'price': 50000},
-    {'id': 2, 'name': 'Spider-Man: No Way Home', 'rating': 4.7, 'price': 50000},
-    {'id': 3, 'name': 'Oppenheimer', 'rating': 4.9, 'price': 60000},
-    {'id': 4, 'name': 'Dune: Part Two', 'rating': 4.6, 'price': 65000},
-    {'id': 5, 'name': 'Joker: Folie à Deux', 'rating': 4.5, 'price': 55000},
-    {'id': 6, 'name': 'Inside Out 2', 'rating': 4.4, 'price': 45000},
-    {'id': 7, 'name': 'Deadpool 3', 'rating': 4.7, 'price': 55000},
-    {'id': 8, 'name': 'Kung Fu Panda 4', 'rating': 4.3, 'price': 45000},
-  ];
-  
-  static List<Map<String, dynamic>> studios = [
-    {'id': 1, 'name': 'Studio Reguler', 'multiplier': 1.0},
-    {'id': 2, 'name': 'Studio VIP', 'multiplier': 1.5},
-    {'id': 3, 'name': 'Studio IMAX', 'multiplier': 2.0},
-  ];
-  
-  static List<String> showTimes = ["14:30", "17:00", "19:30", "21:45"];
-}
+        /* Container Utama */
+        .app-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
 
-// ==================== FUNGSI BANTUAN ====================
-void clearScreen() {
-  print('\n' * 50);
-}
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
 
-void printHeader(String title) {
-  print("==========================================");
-  print("       $title");
-  print("==========================================");
-}
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
 
-void printSuccess(String msg) {
-  print("\x1B[32m✓ $msg\x1B[0m");
-}
+        .header p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
 
-void printError(String msg) {
-  print("\x1B[31m✗ $msg\x1B[0m");
-}
+        /* Bottom Navigation */
+        .bottom-nav {
+            display: flex;
+            background: white;
+            border-top: 1px solid #eee;
+            padding: 10px 0;
+            margin-top: auto;
+        }
 
-void printInfo(String msg) {
-  print("\x1B[36mℹ $msg\x1B[0m");
-}
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #888;
+        }
 
-String? input(String prompt) {
-  stdout.write(prompt);
-  return stdin.readLineSync();
-}
+        .nav-item.active {
+            color: #667eea;
+            border-top: 3px solid #667eea;
+        }
 
-void waitForEnter() {
-  print("\nTekan Enter untuk melanjutkan...");
-  stdin.readLineSync();
-}
+        .nav-item .nav-icon {
+            font-size: 24px;
+        }
 
-// ==================== HALAMAN LOGIN ====================
-bool loginScreen() {
-  clearScreen();
-  printHeader("LOGIN CINEBOOK");
-  
-  print("\n1. Login");
-  print("2. Register");
-  print("3. Keluar");
-  
-  String? pilihan = input("\nPilih menu: ");
-  
-  if (pilihan == "3") {
-    return false;
-  }
-  
-  String? email = input("Email: ");
-  if (email == null || email.isEmpty) {
-    printError("Email tidak boleh kosong!");
-    waitForEnter();
-    return loginScreen();
-  }
-  
-  if (pilihan == "2") {
-    String? password = input("Password (min 6 karakter): ");
-    if (password == null || password.length < 6) {
-      printError("Password minimal 6 karakter!");
-      waitForEnter();
-      return loginScreen();
-    }
-    printSuccess("Registrasi berhasil!");
-  } else {
-    String? password = input("Password: ");
-    if (password == null || password.isEmpty) {
-      printError("Password tidak boleh kosong!");
-      waitForEnter();
-      return loginScreen();
-    }
-  }
-  
-  AppData.currentUser = email;
-  printSuccess("Login berhasil! Selamat datang, $email");
-  waitForEnter();
-  return true;
-}
+        .nav-item .nav-label {
+            font-size: 11px;
+            margin-top: 4px;
+        }
 
-// ==================== HALAMAN HOME ====================
-void homeScreen() {
-  clearScreen();
-  printHeader("HOME - CINEBOOK");
-  
-  print("\n🎬 Now Showing:");
-  for (var film in AppData.films) {
-    print("   ${film['id']}. ${film['name']} ⭐ ${film['rating']} (Rp ${film['price']})");
-  }
-  
-  print("\n⭐ Top Rated:");
-  var topRated = List.from(AppData.films);
-  topRated.sort((a, b) => (b['rating'] as double).compareTo(a['rating'] as double));
-  for (var i = 0; i < 3; i++) {
-    print("   • ${topRated[i]['name']} ⭐ ${topRated[i]['rating']}");
-  }
-  
-  print("\n🏢 Studio Tersedia:");
-  for (var studio in AppData.studios) {
-    String multiplier = studio['multiplier'] == 1.0 ? "Normal" : 
-                        (studio['multiplier'] == 1.5 ? "Naik 50%" : "Naik 100%");
-    print("   • ${studio['name']} ($multiplier)");
-  }
-}
+        /* Konten */
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 500px;
+        }
 
-// ==================== BOOKING TIKET ====================
-void bookingScreen() {
-  clearScreen();
-  printHeader("BOOKING TIKET");
-  
-  // Pilih Film
-  print("\n🎬 Pilih Film:");
-  for (var film in AppData.films) {
-    print("   ${film['id']}. ${film['name']} - Rp ${film['price']}");
-  }
-  
-  int? filmId;
-  while (filmId == null) {
-    String? inputFilm = input("\nMasukkan nomor film: ");
-    filmId = int.tryParse(inputFilm ?? "");
-    if (filmId == null || filmId < 1 || filmId > AppData.films.length) {
-      printError("Pilihan tidak valid!");
-      filmId = null;
-    }
-  }
-  
-  var selectedFilm = AppData.films[filmId - 1];
-  printSuccess("Film: ${selectedFilm['name']}");
-  
-  // Pilih Studio
-  print("\n🏢 Pilih Studio:");
-  for (var studio in AppData.studios) {
-    print("   ${studio['id']}. ${studio['name']} (${studio['multiplier']}x harga)");
-  }
-  
-  int? studioId;
-  while (studioId == null) {
-    String? inputStudio = input("Masukkan nomor studio: ");
-    studioId = int.tryParse(inputStudio ?? "");
-    if (studioId == null || studioId < 1 || studioId > AppData.studios.length) {
-      printError("Pilihan tidak valid!");
-      studioId = null;
-    }
-  }
-  
-  var selectedStudio = AppData.studios[studioId - 1];
-  printSuccess("Studio: ${selectedStudio['name']}");
-  
-  // Pilih Jadwal
-  print("\n🕐 Pilih Jadwal:");
-  for (var i = 0; i < AppData.showTimes.length; i++) {
-    print("   ${i + 1}. ${AppData.showTimes[i]}");
-  }
-  
-  int? timeIndex;
-  while (timeIndex == null) {
-    String? inputTime = input("Masukkan nomor jadwal: ");
-    timeIndex = int.tryParse(inputTime ?? "");
-    if (timeIndex == null || timeIndex < 1 || timeIndex > AppData.showTimes.length) {
-      printError("Pilihan tidak valid!");
-      timeIndex = null;
-    }
-  }
-  
-  var selectedTime = AppData.showTimes[timeIndex - 1];
-  printSuccess("Jadwal: $selectedTime");
-  
-  // Denah Kursi
-  List<String> rows = ["A", "B", "C", "D", "E", "F"];
-  Map<String, String> seatStatus = {};
-  
-  for (String row in rows) {
-    for (int i = 1; i <= 6; i++) {
-      seatStatus["$row$i"] = "available";
-    }
-  }
-  // Contoh kursi terisi
-  seatStatus["C3"] = "booked";
-  seatStatus["D5"] = "booked";
-  
-  List<String> selectedSeats = [];
-  
-  while (true) {
-    clearScreen();
-    printHeader("PILIH KURSI");
-    print("\nLAYAR BIOSKOP");
-    print("============");
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Kartu Film */
+        .film-card {
+            background: #f5f5f5;
+            border-radius: 15px;
+            padding: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .film-card.selected {
+            background: linear-gradient(135deg, #667eea20, #764ba220);
+            border: 2px solid #667eea;
+        }
+
+        .film-poster {
+            width: 60px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 35px;
+        }
+
+        .film-info h4 {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .film-info .rating {
+            color: #ffc107;
+            font-size: 12px;
+        }
+
+        .film-info .price {
+            color: #667eea;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Chip (Studio, Jadwal, Snack) */
+        .chip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .chip {
+            padding: 8px 16px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip.selected {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .chip.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Denah Kursi */
+        .screen-label {
+            text-align: center;
+            background: #333;
+            color: white;
+            padding: 8px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+
+        .seat-map {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .seat-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .seat-row-label {
+            width: 30px;
+            font-weight: bold;
+        }
+
+        .seat-row-seats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .seat {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .seat.available {
+            background: #4caf50;
+            color: white;
+        }
+
+        .seat.selected {
+            background: #2196f3;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .seat.booked {
+            background: #f44336;
+            color: white;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 15px 0;
+            font-size: 11px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        /* Ringkasan */
+        .summary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .summary-total {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* Tombol */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 14px;
+        }
+
+        /* Tiket Card */
+        .ticket-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Alert */
+        .alert {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        .alert.success { background: #4caf50; }
+        .alert.error { background: #f44336; }
+        .alert.warning { background: #ff9800; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Header -->
+    <div class="header">
+        <h1>🎬 CineBook</h1>
+        <p>Booking Tiket Bioskop Mudah & Cepat</p>
+    </div>
+
+    <!-- Konten -->
+    <div class="content" id="content">
+        <!-- Screen Login -->
+        <div id="loginScreen" class="screen">
+            <h3 style="text-align:center; margin-bottom:20px">Welcome Back!</h3>
+            <div class="form-group">
+                <input type="email" id="loginEmail" placeholder="Email" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <input type="password" id="loginPassword" placeholder="Password">
+            </div>
+            <button class="btn btn-primary" onclick="handleLogin()">LOGIN</button>
+            <p style="text-align:center; margin-top:15px; font-size:12px; color:#888">
+                Demo: masukkan email apapun, password minimal 6 karakter
+            </p>
+        </div>
+
+        <!-- Screen Home -->
+        <div id="homeScreen" class="screen">
+            <h3>🎬 Now Showing</h3>
+            <div id="filmList"></div>
+            <h3 style="margin-top:20px">⭐ Top Rated</h3>
+            <div id="topRatedList"></div>
+            <h3 style="margin-top:20px">🍿 Snacks</h3>
+            <div id="snackList"></div>
+        </div>
+
+        <!-- Screen Booking -->
+        <div id="bookingScreen" class="screen">
+            <h3>🎥 Pilih Film</h3>
+            <div id="bookingFilmList"></div>
+            
+            <h3>🏢 Pilih Studio</h3>
+            <div class="chip-container" id="studioContainer"></div>
+            
+            <h3>🕐 Pilih Jadwal</h3>
+            <div class="chip-container" id="timeContainer"></div>
+            
+            <h3>💺 Pilih Kursi</h3>
+            <div class="screen-label">LAYAR BIOSKOP</div>
+            <div id="seatMap"></div>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-color" style="background:#4caf50"></div><span>Tersedia</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#2196f3"></div><span>Pilihan</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:#f44336"></div><span>Terisi</span></div>
+            </div>
+            
+            <div class="summary" id="bookingSummary">
+                <div class="summary-row"><span>🎬 Film</span><span id="summaryFilm">-</span></div>
+                <div class="summary-row"><span>🏢 Studio</span><span id="summaryStudio">-</span></div>
+                <div class="summary-row"><span>🕐 Jadwal</span><span id="summaryTime">-</span></div>
+                <div class="summary-row"><span>💺 Kursi</span><span id="summarySeats">-</span></div>
+                <div class="summary-total" id="summaryTotal">Total: Rp 0</div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="confirmBooking()">KONFIRMASI PEMBAYARAN</button>
+        </div>
+
+        <!-- Screen Tiket -->
+        <div id="ticketScreen" class="screen">
+            <div id="ticketList"></div>
+        </div>
+
+        <!-- Screen Profil -->
+        <div id="profileScreen" class="screen">
+            <div style="text-align:center">
+                <div style="width:80px;height:80px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 15px">
+                    <span style="font-size:40px">👤</span>
+                </div>
+                <h3 id="profileEmail">-</h3>
+                <p style="color:#888">Member since 2026</p>
+            </div>
+            <div class="summary" style="margin-top:20px">
+                <div class="summary-row"><span>🎟️ Total Tiket</span><span id="profileTotalTickets">0</span></div>
+                <div class="summary-row"><span>⭐ Total Poin</span><span id="profileTotalPoints">0</span></div>
+                <div class="summary-row"><span>💰 Total Booking</span><span id="profileTotalSpent">Rp 0</span></div>
+            </div>
+            <button class="btn btn-danger" onclick="handleLogout()" style="margin-top:20px">LOGOUT</button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-item" data-nav="home">
+            <div class="nav-icon">🏠</div>
+            <div class="nav-label">Home</div>
+        </div>
+        <div class="nav-item" data-nav="booking">
+            <div class="nav-icon">🎬</div>
+            <div class="nav-label">Booking</div>
+        </div>
+        <div class="nav-item" data-nav="ticket">
+            <div class="nav-icon">🎟️</div>
+            <div class="nav-label">Tiket</div>
+        </div>
+        <div class="nav-item" data-nav="profile">
+            <div class="nav-icon">👤</div>
+            <div class="nav-label">Profil</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==================== DATA GLOBAL ====================
+    let currentUser = "";
+    let allBookings = [];
     
-    // Tampilkan denah kursi
-    for (String row in rows) {
-      stdout.write("$row  ");
-      for (int i = 1; i <= 6; i++) {
-        String seat = "$row$i";
-        String status = seatStatus[seat] ?? "available";
+    const films = [
+        { id: 1, name: "Avengers: Endgame", emoji: "🎬", rating: 4.8, price: 50000 },
+        { id: 2, name: "Spider-Man: No Way Home", emoji: "🕷️", rating: 4.7, price: 50000 },
+        { id: 3, name: "Oppenheimer", emoji: "💣", rating: 4.9, price: 60000 },
+        { id: 4, name: "Dune: Part Two", emoji: "🏜️", rating: 4.6, price: 65000 },
+        { id: 5, name: "Joker: Folie à Deux", emoji: "🤡", rating: 4.5, price: 55000 },
+        { id: 6, name: "Inside Out 2", emoji: "😊", rating: 4.4, price: 45000 },
+        { id: 7, name: "Deadpool 3", emoji: "💀", rating: 4.7, price: 55000 },
+        { id: 8, name: "Kung Fu Panda 4", emoji: "🐼", rating: 4.3, price: 45000 }
+    ];
+    
+    const studios = [
+        { id: 1, name: "Studio Reguler", multiplier: 1.0 },
+        { id: 2, name: "Studio VIP", multiplier: 1.5 },
+        { id: 3, name: "Studio IMAX", multiplier: 2.0 }
+    ];
+    
+    const showTimes = ["14:30", "17:00", "19:30", "21:45"];
+    
+    // ==================== VARIABEL BOOKING ====================
+    let selectedFilm = null;
+    let selectedStudio = studios[0];
+    let selectedTime = showTimes[0];
+    let selectedSeats = [];
+    let seatStatus = {};
+    
+    // Inisialisasi kursi
+    function initSeats() {
+        const rows = ["A", "B", "C", "D", "E", "F"];
+        seatStatus = {};
+        for (let row of rows) {
+            for (let i = 1; i <= 6; i++) {
+                seatStatus[`${row}${i}`] = "available";
+            }
+        }
+        seatStatus["C3"] = "booked";
+        seatStatus["D5"] = "booked";
+        seatStatus["B4"] = "booked";
+        selectedSeats = [];
+    }
+    
+    function getSeatPrice(seat) {
+        return (seat.startsWith("A") || seat.startsWith("B")) ? 45000 : 75000;
+    }
+    
+    function getTotalPrice() {
+        let total = 0;
+        for (let seat of selectedSeats) {
+            total += getSeatPrice(seat);
+        }
+        total = Math.floor(total * selectedStudio.multiplier);
+        return total;
+    }
+    
+    // ==================== FUNGSI UI ====================
+    function showAlert(message, type = "success") {
+        const alert = document.createElement("div");
+        alert.className = `alert ${type}`;
+        alert.innerHTML = message;
+        document.body.appendChild(alert);
+        setTimeout(() => alert.remove(), 2000);
+    }
+    
+    function showScreen(screenId) {
+        document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+        document.getElementById(`${screenId}Screen`).classList.add("active");
         
-        if (status == "booked") {
-          stdout.write("[XX] ");
-        } else if (selectedSeats.contains(seat)) {
-          stdout.write("[✓✓] ");
-        } else {
-          stdout.write("[${seat}] ");
-        }
-      }
-      print("");
+        document.querySelectorAll(".nav-item").forEach(nav => nav.classList.remove("active"));
+        document.querySelector(`.nav-item[data-nav="${screenId}"]`).classList.add("active");
+        
+        if (screenId === "home") renderHome();
+        else if (screenId === "booking") renderBooking();
+        else if (screenId === "ticket") renderTickets();
+        else if (screenId === "profile") renderProfile();
     }
     
-    print("\n🟢 [A1] = Tersedia");
-    print("🔵 [✓✓] = Pilihan Anda");
-    print("🔴 [XX] = Terisi");
-    
-    print("\nKursi dipilih: ${selectedSeats.isEmpty ? "Belum ada" : selectedSeats.join(", ")}");
-    
-    int totalHarga = 0;
-    for (String seat in selectedSeats) {
-      if (seat.startsWith("A") || seat.startsWith("B")) {
-        totalHarga += 45000;
-      } else {
-        totalHarga += 75000;
-      }
-    }
-    totalHarga = (totalHarga * selectedStudio['multiplier']).toInt();
-    print("💰 Total: Rp $totalHarga");
-    
-    print("\nMenu:");
-    print("1. Pilih kursi");
-    print("2. Hapus kursi");
-    print("3. Selesai & Checkout");
-    print("4. Batal");
-    
-    String? menu = input("\nPilihan: ");
-    
-    if (menu == "1") {
-      String? seatCode = input("Masukkan kode kursi (contoh: A1): ");
-      if (seatCode != null && seatStatus.containsKey(seatCode)) {
-        if (seatStatus[seatCode] == "booked") {
-          printError("Kursi $seatCode sudah dipesan!");
-        } else if (selectedSeats.contains(seatCode)) {
-          printError("Kursi $seatCode sudah dipilih!");
-        } else {
-          selectedSeats.add(seatCode);
-          printSuccess("Kursi $seatCode dipilih");
+    // ==================== LOGIN ====================
+    function handleLogin() {
+        const email = document.getElementById("loginEmail").value.trim();
+        const password = document.getElementById("loginPassword").value;
+        
+        if (!email) {
+            showAlert("Masukkan email!", "error");
+            return;
         }
-      } else {
-        printError("Kode kursi tidak valid!");
-      }
-      waitForEnter();
-    } else if (menu == "2") {
-      String? seatCode = input("Masukkan kode kursi yang akan dihapus: ");
-      if (selectedSeats.contains(seatCode)) {
-        selectedSeats.remove(seatCode);
-        printSuccess("Kursi $seatCode dihapus");
-      } else {
-        printError("Kursi $seatCode tidak ada dalam pilihan!");
-      }
-      waitForEnter();
-    } else if (menu == "3") {
-      if (selectedSeats.isEmpty) {
-        printError("Pilih minimal 1 kursi!");
-        waitForEnter();
-      } else {
-        // Checkout
-        String ticketId = DateTime.now().millisecondsSinceEpoch.toString().substring(8);
-        Map<String, dynamic> booking = {
-          'id': ticketId,
-          'film': selectedFilm['name'],
-          'studio': selectedStudio['name'],
-          'time': selectedTime,
-          'seats': List.from(selectedSeats),
-          'total': totalHarga,
-          'date': DateTime.now().toString(),
+        if (password.length < 6) {
+            showAlert("Password minimal 6 karakter!", "error");
+            return;
+        }
+        
+        currentUser = email;
+        showAlert("Login berhasil! Selamat datang, " + email);
+        initSeats();
+        selectedFilm = films[0];
+        renderHome();
+        showScreen("home");
+    }
+    
+    function handleLogout() {
+        currentUser = "";
+        allBookings = [];
+        document.getElementById("loginEmail").value = "";
+        document.getElementById("loginPassword").value = "";
+        showScreen("login");
+        showAlert("Logout berhasil!");
+    }
+    
+    // ==================== RENDER HOME ====================
+    function renderHome() {
+        const filmList = document.getElementById("filmList");
+        filmList.innerHTML = films.map(film => `
+            <div class="film-card" onclick="selectFilmFromHome(${film.id})">
+                <div class="film-poster">${film.emoji}</div>
+                <div class="film-info">
+                    <h4>${film.name}</h4>
+                    <div class="rating">⭐ ${film.rating}</div>
+                    <div class="price">Rp ${film.price.toLocaleString()}</div>
+                </div>
+            </div>
+        `).join("");
+        
+        const topRated = [...films].sort((a,b) => b.rating - a.rating).slice(0,5);
+        document.getElementById("topRatedList").innerHTML = topRated.map(film => `
+            <div class="film-card" onclick="selectFilmFromHome(${film.id})">
+                <div class="film-poster">${film.emoji}</div>
+                <div class="film-info">
+                    <h4>${film.name}</h4>
+                    <div class="rating">⭐ ${film.rating}</div>
+                </div>
+            </div>
+        `).join("");
+        
+        const snacks = [
+            { name: "Popcorn", price: 25000, emoji: "🍿" },
+            { name: "Soda", price: 15000, emoji: "🥤" },
+            { name: "Nacho", price: 20000, emoji: "🌮" },
+            { name: "Hotdog", price: 18000, emoji: "🌭" },
+            { name: "Candy", price: 10000, emoji: "🍬" }
+        ];
+        document.getElementById("snackList").innerHTML = snacks.map(snack => `
+            <div class="film-card">
+                <div class="film-poster" style="font-size:30px">${snack.emoji}</div>
+                <div class="film-info">
+                    <h4>${snack.name}</h4>
+                    <div class="price">Rp ${snack.price.toLocaleString()}</div>
+                </div>
+            </div>
+        `).join("");
+    }
+    
+    function selectFilmFromHome(filmId) {
+        selectedFilm = films.find(f => f.id === filmId);
+        initSeats();
+        renderBooking();
+        showScreen("booking");
+        showAlert(`Film ${selectedFilm.name} dipilih`);
+    }
+    
+    // ==================== RENDER BOOKING ====================
+    function renderBooking() {
+        // Film list
+        document.getElementById("bookingFilmList").innerHTML = films.map(film => `
+            <div class="film-card ${selectedFilm?.id === film.id ? 'selected' : ''}" onclick="selectFilmForBooking(${film.id})">
+                <div class="film-poster">${film.emoji}</div>
+                <div class="film-info">
+                    <h4>${film.name}</h4>
+                    <div class="price">Rp ${film.price.toLocaleString()}</div>
+                </div>
+            </div>
+        `).join("");
+        
+        // Studio container
+        document.getElementById("studioContainer").innerHTML = studios.map(studio => `
+            <div class="chip ${selectedStudio?.id === studio.id ? 'selected' : ''}" onclick="selectStudioForBooking(${studio.id})">
+                ${studio.name}
+            </div>
+        `).join("");
+        
+        // Time container
+        document.getElementById("timeContainer").innerHTML = showTimes.map(time => `
+            <div class="chip ${selectedTime === time ? 'selected' : ''}" onclick="selectTimeForBooking('${time}')">
+                ${time}
+            </div>
+        `).join("");
+        
+        // Seat map
+        const rows = ["A", "B", "C", "D", "E", "F"];
+        let seatHtml = "";
+        for (let row of rows) {
+            seatHtml += `<div class="seat-row">
+                <div class="seat-row-label">${row}</div>
+                <div class="seat-row-seats">`;
+            for (let i = 1; i <= 6; i++) {
+                const seat = `${row}${i}`;
+                const status = seatStatus[seat] || "available";
+                const isSelected = selectedSeats.includes(seat);
+                let seatClass = "seat";
+                if (status === "booked") seatClass += " booked";
+                else if (isSelected) seatClass += " selected";
+                else seatClass += " available";
+                
+                seatHtml += `<div class="${seatClass}" onclick="toggleSeat('${seat}')">${seat}</div>`;
+            }
+            seatHtml += `</div></div>`;
+        }
+        document.getElementById("seatMap").innerHTML = seatHtml;
+        
+        // Summary
+        document.getElementById("summaryFilm").innerText = selectedFilm?.name || "-";
+        document.getElementById("summaryStudio").innerText = selectedStudio?.name || "-";
+        document.getElementById("summaryTime").innerText = selectedTime;
+        document.getElementById("summarySeats").innerText = selectedSeats.length ? selectedSeats.join(", ") : "-";
+        document.getElementById("summaryTotal").innerHTML = `Total: Rp ${getTotalPrice().toLocaleString()}`;
+    }
+    
+    function selectFilmForBooking(filmId) {
+        selectedFilm = films.find(f => f.id === filmId);
+        initSeats();
+        renderBooking();
+        showAlert(`Film ${selectedFilm.name} dipilih`);
+    }
+    
+    function selectStudioForBooking(studioId) {
+        selectedStudio = studios.find(s => s.id === studioId);
+        renderBooking();
+    }
+    
+    function selectTimeForBooking(time) {
+        selectedTime = time;
+        renderBooking();
+    }
+    
+    function toggleSeat(seat) {
+        if (seatStatus[seat] === "booked") {
+            showAlert(`Kursi ${seat} sudah dipesan!`, "error");
+            return;
+        }
+        
+        if (selectedSeats.includes(seat)) {
+            selectedSeats = selectedSeats.filter(s => s !== seat);
+            seatStatus[seat] = "available";
+        } else {
+            selectedSeats.push(seat);
+            seatStatus[seat] = "selected";
+        }
+        renderBooking();
+    }
+    
+    function confirmBooking() {
+        if (!selectedFilm) {
+            showAlert("Pilih film terlebih dahulu!", "error");
+            return;
+        }
+        if (selectedSeats.length === 0) {
+            showAlert("Pilih minimal 1 kursi!", "error");
+            return;
+        }
+        
+        const ticketId = Date.now().toString().slice(-8);
+        const booking = {
+            id: ticketId,
+            film: selectedFilm.name,
+            studio: selectedStudio.name,
+            time: selectedTime,
+            seats: [...selectedSeats],
+            total: getTotalPrice(),
+            date: new Date().toISOString()
         };
-        AppData.allBookings.add(booking);
+        allBookings.push(booking);
         
-        clearScreen();
-        printHeader("BOOKING BERHASIL! 🎉");
-        print("\nID Tiket: $ticketId");
-        print("Film: ${selectedFilm['name']}");
-        print("Studio: ${selectedStudio['name']}");
-        print("Jadwal: $selectedTime");
-        print("Kursi: ${selectedSeats.join(", ")}");
-        print("Total: Rp $totalHarga");
-        print("\nTerima kasih telah memesan tiket di CineBook!");
-        waitForEnter();
-        break;
-      }
-    } else if (menu == "4") {
-      printInfo("Booking dibatalkan");
-      waitForEnter();
-      break;
+        showAlert("Booking berhasil! 🎉");
+        renderTickets();
+        showScreen("ticket");
+        initSeats();
+        selectedFilm = films[0];
+        selectedStudio = studios[0];
+        selectedTime = showTimes[0];
     }
-  }
-}
-
-// ==================== LIHAT TIKET ====================
-void ticketScreen() {
-  clearScreen();
-  printHeader("TIKET SAYA");
-  
-  if (AppData.allBookings.isEmpty) {
-    print("\nBelum ada tiket.");
-    print("Silakan booking tiket terlebih dahulu.");
-    waitForEnter();
-    return;
-  }
-  
-  for (var i = 0; i < AppData.allBookings.length; i++) {
-    var booking = AppData.allBookings[i];
-    print("\n┌─────────────────────────────────────────┐");
-    print("│ Tiket #${i + 1}");
-    print("│ ID: ${booking['id']}");
-    print("│ Film: ${booking['film']}");
-    print("│ Studio: ${booking['studio']}");
-    print("│ Jadwal: ${booking['time']}");
-    print("│ Kursi: ${(booking['seats'] as List).join(", ")}");
-    print("│ Total: Rp ${booking['total']}");
-    print("└─────────────────────────────────────────┘");
-  }
-  
-  print("\n1. Batalkan tiket");
-  print("2. Kembali");
-  
-  String? pilihan = input("\nPilihan: ");
-  
-  if (pilihan == "1") {
-    String? indexInput = input("Masukkan nomor tiket yang akan dibatalkan: ");
-    int? index = int.tryParse(indexInput ?? "");
     
-    if (index != null && index >= 1 && index <= AppData.allBookings.length) {
-      var cancelled = AppData.allBookings.removeAt(index - 1);
-      printSuccess("Tiket film ${cancelled['film']} berhasil dibatalkan!");
-    } else {
-      printError("Nomor tiket tidak valid!");
+    // ==================== RENDER TIKET ====================
+    function renderTickets() {
+        const container = document.getElementById("ticketList");
+        if (allBookings.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:40px">
+                    <div style="font-size:50px">🎟️</div>
+                    <p style="margin-top:10px; color:#888">Belum ada tiket</p>
+                    <p style="font-size:12px; color:#888">Silakan booking tiket terlebih dahulu</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = allBookings.map((booking, idx) => `
+            <div class="ticket-card" onclick="showTicketDetail(${idx})">
+                <div class="ticket-header">
+                    <strong>${booking.film}</strong>
+                    <span style="font-size:10px">ID: ${booking.id}</span>
+                </div>
+                <div style="font-size:12px; margin-bottom:5px">${booking.studio} • ${booking.time}</div>
+                <div style="font-size:12px">Kursi: ${booking.seats.join(", ")}</div>
+                <hr style="margin:10px 0; border-color:rgba(255,255,255,0.2)">
+                <div style="display:flex; justify-content:space-between">
+                    <span>Total: Rp ${booking.total.toLocaleString()}</span>
+                    <span style="cursor:pointer; background:rgba(255,255,255,0.2); padding:4px 12px; border-radius:20px" onclick="event.stopPropagation(); cancelBooking(${idx})">Batalkan</span>
+                </div>
+            </div>
+        `).join("");
     }
-    waitForEnter();
-    ticketScreen();
-  }
-}
-
-// ==================== HALAMAN PROFIL ====================
-void profileScreen() {
-  clearScreen();
-  printHeader("PROFIL SAYA");
-  
-  int totalTiket = AppData.allBookings.length;
-  int totalSpent = 0;
-  for (var booking in AppData.allBookings) {
-    totalSpent += booking['total'] as int;
-  }
-  
-  print("\n👤 Email: ${AppData.currentUser}");
-  print("📅 Member sejak: 2026");
-  print("\n📊 Statistik:");
-  print("   • Total Tiket: $totalTiket tiket");
-  print("   • Total Poin: ${totalTiket * 10} poin");
-  print("   • Total Booking: Rp $totalSpent");
-  
-  print("\n1. Logout");
-  print("2. Kembali");
-  
-  String? pilihan = input("\nPilihan: ");
-  
-  if (pilihan == "1") {
-    AppData.allBookings.clear();
-    AppData.currentUser = "";
-    printSuccess("Logout berhasil!");
-    waitForEnter();
-    main(); // Kembali ke login
-    exit(0);
-  }
-}
-
-// ==================== HALAMAN UTAMA ====================
-void mainScreen() {
-  while (true) {
-    clearScreen();
-    printHeader("MENU UTAMA");
-    print("\n👤 User: ${AppData.currentUser}");
-    print("\n1. 🏠 Home");
-    print("2. 🎬 Booking Tiket");
-    print("3. 🎟️ Tiket Saya");
-    print("4. 👤 Profil");
-    print("5. 🚪 Logout");
     
-    String? pilihan = input("\nPilih menu: ");
+    function showTicketDetail(idx) {
+        const booking = allBookings[idx];
+        alert(`🎟️ E-TICKET\n\nFilm: ${booking.film}\nStudio: ${booking.studio}\nJadwal: ${booking.time}\nKursi: ${booking.seats.join(", ")}\nTotal: Rp ${booking.total.toLocaleString()}\n\nQR Code: [SIMULASI]\nID Tiket: ${booking.id}`);
+    }
     
-    switch (pilihan) {
-      case "1":
-        homeScreen();
-        waitForEnter();
-        break;
-      case "2":
-        bookingScreen();
-        break;
-      case "3":
-        ticketScreen();
-        break;
-      case "4":
-        profileScreen();
-        break;
-      case "5":
-        AppData.allBookings.clear();
-        AppData.currentUser = "";
-        printSuccess("Logout berhasil!");
-        waitForEnter();
-        return;
-      default:
-        printError("Pilihan tidak valid!");
-        waitForEnter();
+    function cancelBooking(idx) {
+        if (confirm("Yakin ingin membatalkan tiket ini?")) {
+            const cancelled = allBookings.splice(idx, 1)[0];
+            showAlert(`Tiket ${cancelled.film} dibatalkan`, "warning");
+            renderTickets();
+        }
     }
-  }
-}
+    
+    // ==================== RENDER PROFIL ====================
+    function renderProfile() {
+        document.getElementById("profileEmail").innerText = currentUser;
+        const totalTickets = allBookings.length;
+        const totalSpent = allBookings.reduce((sum, b) => sum + b.total, 0);
+        document.getElementById("profileTotalTickets").innerText = totalTickets;
+        document.getElementById("profileTotalPoints").innerText = totalTickets * 10;
+        document.getElementById("profileTotalSpent").innerHTML = `Rp ${totalSpent.toLocaleString()}`;
+    }
+    
+    // ==================== NAVIGATION ====================
+    document.querySelectorAll(".nav-item").forEach(nav => {
+        nav.addEventListener("click", () => {
+            const screen = nav.dataset.nav;
+            if (currentUser) {
+                if (screen === "home") renderHome();
+                else if (screen === "booking") { initSeats(); selectedFilm = films[0]; renderBooking(); }
+                else if (screen === "ticket") renderTickets();
+                else if (screen === "profile") renderProfile();
+                showScreen(screen);
+            } else {
+                showAlert("Silakan login terlebih dahulu!", "error");
+            }
+        });
+    });
+    
+    // ==================== INIT ====================
+    initSeats();
+    selectedFilm = films[0];
+    showScreen("login");
+</script>
 
-// ==================== MAIN PROGRAM ====================
-void main() {
-  while (true) {
-    bool isLogin = loginScreen();
-    if (!isLogin) {
-      print("Terima kasih telah menggunakan CineBook!");
-      break;
-    }
-    mainScreen();
-  }
-}
+</body>
+</html>
