@@ -1,1 +1,453 @@
-# cobacoba
+
+// ==================== CINEBOOK - APLIKASI PEMESANAN TIKET BIOSKOP ====================
+// Jalankan dengan: dart cinebook.dart
+// ====================================================================================
+
+import 'dart:io';
+
+// ==================== DATA GLOBAL ====================
+class AppData {
+  static String currentUser = "";
+  static List<Map<String, dynamic>> allBookings = [];
+  
+  static List<Map<String, dynamic>> films = [
+    {'id': 1, 'name': 'Avengers: Endgame', 'rating': 4.8, 'price': 50000},
+    {'id': 2, 'name': 'Spider-Man: No Way Home', 'rating': 4.7, 'price': 50000},
+    {'id': 3, 'name': 'Oppenheimer', 'rating': 4.9, 'price': 60000},
+    {'id': 4, 'name': 'Dune: Part Two', 'rating': 4.6, 'price': 65000},
+    {'id': 5, 'name': 'Joker: Folie à Deux', 'rating': 4.5, 'price': 55000},
+    {'id': 6, 'name': 'Inside Out 2', 'rating': 4.4, 'price': 45000},
+    {'id': 7, 'name': 'Deadpool 3', 'rating': 4.7, 'price': 55000},
+    {'id': 8, 'name': 'Kung Fu Panda 4', 'rating': 4.3, 'price': 45000},
+  ];
+  
+  static List<Map<String, dynamic>> studios = [
+    {'id': 1, 'name': 'Studio Reguler', 'multiplier': 1.0},
+    {'id': 2, 'name': 'Studio VIP', 'multiplier': 1.5},
+    {'id': 3, 'name': 'Studio IMAX', 'multiplier': 2.0},
+  ];
+  
+  static List<String> showTimes = ["14:30", "17:00", "19:30", "21:45"];
+}
+
+// ==================== FUNGSI BANTUAN ====================
+void clearScreen() {
+  print('\n' * 50);
+}
+
+void printHeader(String title) {
+  print("==========================================");
+  print("       $title");
+  print("==========================================");
+}
+
+void printSuccess(String msg) {
+  print("\x1B[32m✓ $msg\x1B[0m");
+}
+
+void printError(String msg) {
+  print("\x1B[31m✗ $msg\x1B[0m");
+}
+
+void printInfo(String msg) {
+  print("\x1B[36mℹ $msg\x1B[0m");
+}
+
+String? input(String prompt) {
+  stdout.write(prompt);
+  return stdin.readLineSync();
+}
+
+void waitForEnter() {
+  print("\nTekan Enter untuk melanjutkan...");
+  stdin.readLineSync();
+}
+
+// ==================== HALAMAN LOGIN ====================
+bool loginScreen() {
+  clearScreen();
+  printHeader("LOGIN CINEBOOK");
+  
+  print("\n1. Login");
+  print("2. Register");
+  print("3. Keluar");
+  
+  String? pilihan = input("\nPilih menu: ");
+  
+  if (pilihan == "3") {
+    return false;
+  }
+  
+  String? email = input("Email: ");
+  if (email == null || email.isEmpty) {
+    printError("Email tidak boleh kosong!");
+    waitForEnter();
+    return loginScreen();
+  }
+  
+  if (pilihan == "2") {
+    String? password = input("Password (min 6 karakter): ");
+    if (password == null || password.length < 6) {
+      printError("Password minimal 6 karakter!");
+      waitForEnter();
+      return loginScreen();
+    }
+    printSuccess("Registrasi berhasil!");
+  } else {
+    String? password = input("Password: ");
+    if (password == null || password.isEmpty) {
+      printError("Password tidak boleh kosong!");
+      waitForEnter();
+      return loginScreen();
+    }
+  }
+  
+  AppData.currentUser = email;
+  printSuccess("Login berhasil! Selamat datang, $email");
+  waitForEnter();
+  return true;
+}
+
+// ==================== HALAMAN HOME ====================
+void homeScreen() {
+  clearScreen();
+  printHeader("HOME - CINEBOOK");
+  
+  print("\n🎬 Now Showing:");
+  for (var film in AppData.films) {
+    print("   ${film['id']}. ${film['name']} ⭐ ${film['rating']} (Rp ${film['price']})");
+  }
+  
+  print("\n⭐ Top Rated:");
+  var topRated = List.from(AppData.films);
+  topRated.sort((a, b) => (b['rating'] as double).compareTo(a['rating'] as double));
+  for (var i = 0; i < 3; i++) {
+    print("   • ${topRated[i]['name']} ⭐ ${topRated[i]['rating']}");
+  }
+  
+  print("\n🏢 Studio Tersedia:");
+  for (var studio in AppData.studios) {
+    String multiplier = studio['multiplier'] == 1.0 ? "Normal" : 
+                        (studio['multiplier'] == 1.5 ? "Naik 50%" : "Naik 100%");
+    print("   • ${studio['name']} ($multiplier)");
+  }
+}
+
+// ==================== BOOKING TIKET ====================
+void bookingScreen() {
+  clearScreen();
+  printHeader("BOOKING TIKET");
+  
+  // Pilih Film
+  print("\n🎬 Pilih Film:");
+  for (var film in AppData.films) {
+    print("   ${film['id']}. ${film['name']} - Rp ${film['price']}");
+  }
+  
+  int? filmId;
+  while (filmId == null) {
+    String? inputFilm = input("\nMasukkan nomor film: ");
+    filmId = int.tryParse(inputFilm ?? "");
+    if (filmId == null || filmId < 1 || filmId > AppData.films.length) {
+      printError("Pilihan tidak valid!");
+      filmId = null;
+    }
+  }
+  
+  var selectedFilm = AppData.films[filmId - 1];
+  printSuccess("Film: ${selectedFilm['name']}");
+  
+  // Pilih Studio
+  print("\n🏢 Pilih Studio:");
+  for (var studio in AppData.studios) {
+    print("   ${studio['id']}. ${studio['name']} (${studio['multiplier']}x harga)");
+  }
+  
+  int? studioId;
+  while (studioId == null) {
+    String? inputStudio = input("Masukkan nomor studio: ");
+    studioId = int.tryParse(inputStudio ?? "");
+    if (studioId == null || studioId < 1 || studioId > AppData.studios.length) {
+      printError("Pilihan tidak valid!");
+      studioId = null;
+    }
+  }
+  
+  var selectedStudio = AppData.studios[studioId - 1];
+  printSuccess("Studio: ${selectedStudio['name']}");
+  
+  // Pilih Jadwal
+  print("\n🕐 Pilih Jadwal:");
+  for (var i = 0; i < AppData.showTimes.length; i++) {
+    print("   ${i + 1}. ${AppData.showTimes[i]}");
+  }
+  
+  int? timeIndex;
+  while (timeIndex == null) {
+    String? inputTime = input("Masukkan nomor jadwal: ");
+    timeIndex = int.tryParse(inputTime ?? "");
+    if (timeIndex == null || timeIndex < 1 || timeIndex > AppData.showTimes.length) {
+      printError("Pilihan tidak valid!");
+      timeIndex = null;
+    }
+  }
+  
+  var selectedTime = AppData.showTimes[timeIndex - 1];
+  printSuccess("Jadwal: $selectedTime");
+  
+  // Denah Kursi
+  List<String> rows = ["A", "B", "C", "D", "E", "F"];
+  Map<String, String> seatStatus = {};
+  
+  for (String row in rows) {
+    for (int i = 1; i <= 6; i++) {
+      seatStatus["$row$i"] = "available";
+    }
+  }
+  // Contoh kursi terisi
+  seatStatus["C3"] = "booked";
+  seatStatus["D5"] = "booked";
+  
+  List<String> selectedSeats = [];
+  
+  while (true) {
+    clearScreen();
+    printHeader("PILIH KURSI");
+    print("\nLAYAR BIOSKOP");
+    print("============");
+    
+    // Tampilkan denah kursi
+    for (String row in rows) {
+      stdout.write("$row  ");
+      for (int i = 1; i <= 6; i++) {
+        String seat = "$row$i";
+        String status = seatStatus[seat] ?? "available";
+        
+        if (status == "booked") {
+          stdout.write("[XX] ");
+        } else if (selectedSeats.contains(seat)) {
+          stdout.write("[✓✓] ");
+        } else {
+          stdout.write("[${seat}] ");
+        }
+      }
+      print("");
+    }
+    
+    print("\n🟢 [A1] = Tersedia");
+    print("🔵 [✓✓] = Pilihan Anda");
+    print("🔴 [XX] = Terisi");
+    
+    print("\nKursi dipilih: ${selectedSeats.isEmpty ? "Belum ada" : selectedSeats.join(", ")}");
+    
+    int totalHarga = 0;
+    for (String seat in selectedSeats) {
+      if (seat.startsWith("A") || seat.startsWith("B")) {
+        totalHarga += 45000;
+      } else {
+        totalHarga += 75000;
+      }
+    }
+    totalHarga = (totalHarga * selectedStudio['multiplier']).toInt();
+    print("💰 Total: Rp $totalHarga");
+    
+    print("\nMenu:");
+    print("1. Pilih kursi");
+    print("2. Hapus kursi");
+    print("3. Selesai & Checkout");
+    print("4. Batal");
+    
+    String? menu = input("\nPilihan: ");
+    
+    if (menu == "1") {
+      String? seatCode = input("Masukkan kode kursi (contoh: A1): ");
+      if (seatCode != null && seatStatus.containsKey(seatCode)) {
+        if (seatStatus[seatCode] == "booked") {
+          printError("Kursi $seatCode sudah dipesan!");
+        } else if (selectedSeats.contains(seatCode)) {
+          printError("Kursi $seatCode sudah dipilih!");
+        } else {
+          selectedSeats.add(seatCode);
+          printSuccess("Kursi $seatCode dipilih");
+        }
+      } else {
+        printError("Kode kursi tidak valid!");
+      }
+      waitForEnter();
+    } else if (menu == "2") {
+      String? seatCode = input("Masukkan kode kursi yang akan dihapus: ");
+      if (selectedSeats.contains(seatCode)) {
+        selectedSeats.remove(seatCode);
+        printSuccess("Kursi $seatCode dihapus");
+      } else {
+        printError("Kursi $seatCode tidak ada dalam pilihan!");
+      }
+      waitForEnter();
+    } else if (menu == "3") {
+      if (selectedSeats.isEmpty) {
+        printError("Pilih minimal 1 kursi!");
+        waitForEnter();
+      } else {
+        // Checkout
+        String ticketId = DateTime.now().millisecondsSinceEpoch.toString().substring(8);
+        Map<String, dynamic> booking = {
+          'id': ticketId,
+          'film': selectedFilm['name'],
+          'studio': selectedStudio['name'],
+          'time': selectedTime,
+          'seats': List.from(selectedSeats),
+          'total': totalHarga,
+          'date': DateTime.now().toString(),
+        };
+        AppData.allBookings.add(booking);
+        
+        clearScreen();
+        printHeader("BOOKING BERHASIL! 🎉");
+        print("\nID Tiket: $ticketId");
+        print("Film: ${selectedFilm['name']}");
+        print("Studio: ${selectedStudio['name']}");
+        print("Jadwal: $selectedTime");
+        print("Kursi: ${selectedSeats.join(", ")}");
+        print("Total: Rp $totalHarga");
+        print("\nTerima kasih telah memesan tiket di CineBook!");
+        waitForEnter();
+        break;
+      }
+    } else if (menu == "4") {
+      printInfo("Booking dibatalkan");
+      waitForEnter();
+      break;
+    }
+  }
+}
+
+// ==================== LIHAT TIKET ====================
+void ticketScreen() {
+  clearScreen();
+  printHeader("TIKET SAYA");
+  
+  if (AppData.allBookings.isEmpty) {
+    print("\nBelum ada tiket.");
+    print("Silakan booking tiket terlebih dahulu.");
+    waitForEnter();
+    return;
+  }
+  
+  for (var i = 0; i < AppData.allBookings.length; i++) {
+    var booking = AppData.allBookings[i];
+    print("\n┌─────────────────────────────────────────┐");
+    print("│ Tiket #${i + 1}");
+    print("│ ID: ${booking['id']}");
+    print("│ Film: ${booking['film']}");
+    print("│ Studio: ${booking['studio']}");
+    print("│ Jadwal: ${booking['time']}");
+    print("│ Kursi: ${(booking['seats'] as List).join(", ")}");
+    print("│ Total: Rp ${booking['total']}");
+    print("└─────────────────────────────────────────┘");
+  }
+  
+  print("\n1. Batalkan tiket");
+  print("2. Kembali");
+  
+  String? pilihan = input("\nPilihan: ");
+  
+  if (pilihan == "1") {
+    String? indexInput = input("Masukkan nomor tiket yang akan dibatalkan: ");
+    int? index = int.tryParse(indexInput ?? "");
+    
+    if (index != null && index >= 1 && index <= AppData.allBookings.length) {
+      var cancelled = AppData.allBookings.removeAt(index - 1);
+      printSuccess("Tiket film ${cancelled['film']} berhasil dibatalkan!");
+    } else {
+      printError("Nomor tiket tidak valid!");
+    }
+    waitForEnter();
+    ticketScreen();
+  }
+}
+
+// ==================== HALAMAN PROFIL ====================
+void profileScreen() {
+  clearScreen();
+  printHeader("PROFIL SAYA");
+  
+  int totalTiket = AppData.allBookings.length;
+  int totalSpent = 0;
+  for (var booking in AppData.allBookings) {
+    totalSpent += booking['total'] as int;
+  }
+  
+  print("\n👤 Email: ${AppData.currentUser}");
+  print("📅 Member sejak: 2026");
+  print("\n📊 Statistik:");
+  print("   • Total Tiket: $totalTiket tiket");
+  print("   • Total Poin: ${totalTiket * 10} poin");
+  print("   • Total Booking: Rp $totalSpent");
+  
+  print("\n1. Logout");
+  print("2. Kembali");
+  
+  String? pilihan = input("\nPilihan: ");
+  
+  if (pilihan == "1") {
+    AppData.allBookings.clear();
+    AppData.currentUser = "";
+    printSuccess("Logout berhasil!");
+    waitForEnter();
+    main(); // Kembali ke login
+    exit(0);
+  }
+}
+
+// ==================== HALAMAN UTAMA ====================
+void mainScreen() {
+  while (true) {
+    clearScreen();
+    printHeader("MENU UTAMA");
+    print("\n👤 User: ${AppData.currentUser}");
+    print("\n1. 🏠 Home");
+    print("2. 🎬 Booking Tiket");
+    print("3. 🎟️ Tiket Saya");
+    print("4. 👤 Profil");
+    print("5. 🚪 Logout");
+    
+    String? pilihan = input("\nPilih menu: ");
+    
+    switch (pilihan) {
+      case "1":
+        homeScreen();
+        waitForEnter();
+        break;
+      case "2":
+        bookingScreen();
+        break;
+      case "3":
+        ticketScreen();
+        break;
+      case "4":
+        profileScreen();
+        break;
+      case "5":
+        AppData.allBookings.clear();
+        AppData.currentUser = "";
+        printSuccess("Logout berhasil!");
+        waitForEnter();
+        return;
+      default:
+        printError("Pilihan tidak valid!");
+        waitForEnter();
+    }
+  }
+}
+
+// ==================== MAIN PROGRAM ====================
+void main() {
+  while (true) {
+    bool isLogin = loginScreen();
+    if (!isLogin) {
+      print("Terima kasih telah menggunakan CineBook!");
+      break;
+    }
+    mainScreen();
+  }
+}
